@@ -1,0 +1,69 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // FCM Tokens - users can read/write their own tokens
+    match /fcm_tokens/{userId} {
+      allow read: if request.auth != null && request.auth.uid == userId;
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Students - users can read/write their own data
+    match /students/{userId} {
+      allow read: if request.auth != null && request.auth.uid == userId;
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Users collection - users can read/write their own data
+    match /users/{userId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Admins, Moderators, Drivers, Super Admins - read only for authenticated users
+    match /admins/{userId} {
+      allow read: if request.auth != null;
+      allow write: if false; // Only via backend
+    }
+    
+    match /moderators/{userId} {
+      allow read: if request.auth != null;
+      allow write: if false;
+    }
+    
+    match /drivers/{userId} {
+      allow read: if request.auth != null;
+      allow write: if false;
+    }
+    
+    match /super_admins/{userId} {
+      allow read: if request.auth != null;
+      allow write: if false;
+    }
+    
+    // Buses - allow read/write for development (update for production)
+    match /buses/{busNumber} {
+      allow read, write: if true; // Allow all for development - update for production
+    }
+    
+    // Moderators - allow read/write for development (update for production)
+    match /moderators/{moderatorId} {
+      allow read, write: if true; // Allow all for development - update for production
+    }
+    
+    // Drivers - allow read/write for development (update for production)
+    match /drivers/{driverId} {
+      allow read, write: if true; // Allow all for development - update for production
+    }
+    
+    // Notifications - allow read/write for development (update for production)
+    match /notifications/{notificationId} {
+      allow read, write: if true; // Allow all for development - update for production
+    }
+    
+    // Reports - allow read/write for development (update for production)
+    match /reports/{reportId} {
+      allow read, write: if true; // Allow all for development - update for production
+    }
+  }
+}
+
