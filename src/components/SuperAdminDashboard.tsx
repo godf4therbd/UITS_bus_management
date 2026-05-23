@@ -19,7 +19,6 @@ import {
   getNotifications,
   saveNotification,
   subscribeToNotifications,
-  getReports,
   subscribeToReports,
 } from '../utils/firestoreService';
 import { Button } from './ui/button';
@@ -49,21 +48,11 @@ import {
   TableHeader,
   TableRow,
 } from './ui/table';
+import { PREBUILT_MESSAGES } from '../constants/notifications';
 
 interface SuperAdminDashboardProps {
   onLogout: () => void;
 }
-
-
-const PREBUILT_MESSAGES = [
-  'Bus is full',
-  'Bus is delayed by 10 minutes',
-  'Bus is delayed by 15 minutes',
-  'Bus is delayed by 20 minutes',
-  'Bus will depart shortly',
-  'Bus has departed',
-  'Traffic on the route - expect delays',
-];
 
 // Notification List Component
 function NotificationList() {
@@ -155,6 +144,8 @@ export function SuperAdminDashboard({ onLogout }: SuperAdminDashboardProps) {
     capacity: 40,
   });
 
+  const [saving, setSaving] = useState(false);
+
   // Moderator management state
   const [isAddingModerator, setIsAddingModerator] = useState(false);
   const [newModerator, setNewModerator] = useState({
@@ -244,30 +235,6 @@ export function SuperAdminDashboard({ onLogout }: SuperAdminDashboardProps) {
     }
   };
 
-  const handleSaveBuses = async (updatedBuses: Bus[]) => {
-    setBuses(updatedBuses);
-    const success = await saveBuses(updatedBuses);
-    if (!success) {
-      toast.error('Failed to save buses to Firebase');
-    }
-  };
-
-  const handleSaveModerators = async (updatedModerators: Moderator[]) => {
-    setModerators(updatedModerators);
-    const success = await saveModerators(updatedModerators);
-    if (!success) {
-      toast.error('Failed to save moderators to Firebase');
-    }
-  };
-
-  const handleSaveDrivers = async (updatedDrivers: Driver[]) => {
-    setDrivers(updatedDrivers);
-    const success = await saveDrivers(updatedDrivers);
-    if (!success) {
-      toast.error('Failed to save drivers to Firebase');
-    }
-  };
-
   const handleLogout = () => {
     logout();
     toast.success('Logged out successfully');
@@ -289,26 +256,26 @@ export function SuperAdminDashboard({ onLogout }: SuperAdminDashboardProps) {
       stops: [],
     };
 
-    const success = await saveBus(bus);
-    if (success) {
-      setBuses([...buses, bus]);
-      toast.success(`Bus ${bus.number} added successfully`);
-      setNewBus({
-        number: '',
-        route: '',
-        driverName: '',
-        driverPhone: '',
-        adminName: '',
-        capacity: 40,
-      });
-      setIsAddingBus(false);
-    } else {
-      toast.error('Failed to add bus to Firebase');
+    setSaving(true);
+    try {
+      const success = await saveBus(bus);
+      if (success) {
+        setBuses([...buses, bus]);
+        toast.success(`Bus ${bus.number} added successfully`);
+        setNewBus({ number: '', route: '', driverName: '', driverPhone: '', adminName: '', capacity: 40 });
+        setIsAddingBus(false);
+      } else {
+        toast.error('Failed to add bus to Firebase');
+      }
+    } finally {
+      setSaving(false);
     }
   };
 
   const handleDeleteBus = async (busNumber: string) => {
-    if (confirm(`Are you sure you want to delete ${busNumber}?`)) {
+    if (!confirm(`Are you sure you want to delete ${busNumber}?`)) return;
+    setSaving(true);
+    try {
       const success = await deleteBus(busNumber);
       if (success) {
         setBuses(buses.filter(b => b.number !== busNumber));
@@ -316,6 +283,8 @@ export function SuperAdminDashboard({ onLogout }: SuperAdminDashboardProps) {
       } else {
         toast.error('Failed to delete bus from Firebase');
       }
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -346,21 +315,19 @@ export function SuperAdminDashboard({ onLogout }: SuperAdminDashboardProps) {
       capacity: newBus.capacity,
     };
 
-    const success = await saveBus(bus);
-    if (success) {
-      setBuses(buses.map(b => b.number === editingBus ? bus : b));
-      toast.success(`${editingBus} updated successfully`);
-      setEditingBus(null);
-      setNewBus({
-        number: '',
-        route: '',
-        driverName: '',
-        driverPhone: '',
-        adminName: '',
-        capacity: 40,
-      });
-    } else {
-      toast.error('Failed to update bus in Firebase');
+    setSaving(true);
+    try {
+      const success = await saveBus(bus);
+      if (success) {
+        setBuses(buses.map(b => b.number === editingBus ? bus : b));
+        toast.success(`${editingBus} updated successfully`);
+        setEditingBus(null);
+        setNewBus({ number: '', route: '', driverName: '', driverPhone: '', adminName: '', capacity: 40 });
+      } else {
+        toast.error('Failed to update bus in Firebase');
+      }
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -403,7 +370,7 @@ export function SuperAdminDashboard({ onLogout }: SuperAdminDashboardProps) {
               value: qrData,
               size: size,
               level: 'H',
-              includeMargin: true,
+              marginSize: 4,
             } as any)
           );
 
@@ -453,7 +420,7 @@ export function SuperAdminDashboard({ onLogout }: SuperAdminDashboardProps) {
                 toast.error('Failed to generate QR code image');
               };
               
-              img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgData)));
+              img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svgData);
             } else {
               if (document.body.contains(tempDiv)) {
                 document.body.removeChild(tempDiv);
@@ -787,8 +754,8 @@ export function SuperAdminDashboard({ onLogout }: SuperAdminDashboardProps) {
                       />
                     </div>
                     <div className="flex gap-2">
-                      <Button onClick={handleAddBus} className="flex-1">Add Bus</Button>
-                      <Button variant="outline" onClick={() => setIsAddingBus(false)}>Cancel</Button>
+                      <Button onClick={handleAddBus} disabled={saving} className="flex-1">{saving ? 'Saving...' : 'Add Bus'}</Button>
+                      <Button variant="outline" disabled={saving} onClick={() => setIsAddingBus(false)}>Cancel</Button>
                     </div>
                   </div>
                 </DialogContent>
@@ -828,7 +795,7 @@ export function SuperAdminDashboard({ onLogout }: SuperAdminDashboardProps) {
                           <div className="flex gap-2">
                             {editingBus === bus.number ? (
                               <>
-                                <Button size="sm" onClick={handleSaveBus}>
+                                <Button size="sm" onClick={handleSaveBus} disabled={saving}>
                                   <Save className="w-3 h-3" />
                                 </Button>
                                 <Button size="sm" variant="outline" onClick={() => setEditingBus(null)}>
@@ -848,7 +815,7 @@ export function SuperAdminDashboard({ onLogout }: SuperAdminDashboardProps) {
                                 <Button size="sm" variant="outline" onClick={() => handleEditBus(bus)}>
                                   <Edit className="w-3 h-3" />
                                 </Button>
-                                <Button size="sm" variant="destructive" onClick={() => handleDeleteBus(bus.number)}>
+                                <Button size="sm" variant="destructive" onClick={() => handleDeleteBus(bus.number)} disabled={saving}>
                                   <Trash2 className="w-3 h-3" />
                                 </Button>
                               </>
@@ -933,7 +900,7 @@ export function SuperAdminDashboard({ onLogout }: SuperAdminDashboardProps) {
                           value={generateQRCodeData(qrCodeBus)}
                           size={256}
                           level="H"
-                          includeMargin={true}
+                          marginSize={4}
                         />
                       </div>
                       <div className="space-y-2 text-sm bg-gray-50 dark:bg-gray-800 p-3 rounded-lg">

@@ -11,7 +11,6 @@ import {
   getNotifications,
   saveNotification,
   subscribeToNotifications,
-  getReports,
   subscribeToReports,
 } from '../utils/firestoreService';
 import { Button } from './ui/button';
@@ -21,7 +20,7 @@ import { Label } from './ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Textarea } from './ui/textarea';
 import { toast } from 'sonner';
-import { LogOut, Bus as BusIcon, Users, Edit, Save, X, Trash2, Send, Bell, AlertTriangle, CheckCircle } from 'lucide-react';
+import { LogOut, Bus as BusIcon, Users, Edit, Save, X, Send, Bell, AlertTriangle, CheckCircle } from 'lucide-react';
 import { Badge } from './ui/badge';
 import { ThemeToggle } from './ThemeToggle';
 import {
@@ -32,21 +31,11 @@ import {
   TableHeader,
   TableRow,
 } from './ui/table';
+import { PREBUILT_MESSAGES } from '../constants/notifications';
 
 interface ModeratorDashboardProps {
   onLogout: () => void;
 }
-
-
-const PREBUILT_MESSAGES = [
-  'Bus is full',
-  'Bus is delayed by 10 minutes',
-  'Bus is delayed by 15 minutes',
-  'Bus is delayed by 20 minutes',
-  'Bus will depart shortly',
-  'Bus has departed',
-  'Traffic on the route - expect delays',
-];
 
 // Notification List Component
 function NotificationList() {

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { onAuthStateChanged } from 'firebase/auth';
 import { SplashScreen } from './components/SplashScreen';
 import { Login } from './components/Login';
 import { ForgotPassword } from './components/ForgotPassword';
@@ -9,10 +10,12 @@ import { DriverDashboard } from './components/DriverDashboard';
 import { SuperAdminDashboard } from './components/SuperAdminDashboard';
 import { ModeratorDashboard } from './components/ModeratorDashboard';
 import { FirebaseSetupPage } from './components/FirebaseSetupPage';
-import { getCurrentUser } from './utils/auth';
+import { getCurrentUser, logout } from './utils/auth';
+import { auth } from './config/firebase';
 import { Toaster } from './components/ui/sonner';
 import { useFirebaseMessaging } from './hooks/useFirebaseMessaging';
 import { onMessageListener } from './utils/firebaseMessaging';
+import { logger } from './utils/logger';
 
 type Screen = 
   | 'splash' 
@@ -34,27 +37,37 @@ export default function App() {
   const [currentScreen, setCurrentScreen] = useState<Screen>(
     showSetup ? 'firebase-setup' : 'splash'
   );
-  const { token, isSupported, requestPermission } = useFirebaseMessaging();
+  const { isSupported } = useFirebaseMessaging();
 
   useEffect(() => {
-    // Check if user is already logged in
-    const user = getCurrentUser();
-    if (user) {
-      if (user.role === 'super_admin') {
+    if (!auth) return;
+    // Verify the Firebase Auth session matches what's in localStorage.
+    // If there's no active Firebase session, wipe any tampered localStorage user.
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+      const storedUser = getCurrentUser();
+      if (!storedUser) return;
+
+      if (!firebaseUser) {
+        // No active Firebase session — clear potentially forged localStorage entry
+        logout();
+        setCurrentScreen('login');
+        return;
+      }
+
+      // Session is valid — navigate to the correct dashboard
+      if (storedUser.role === 'super_admin') {
         setCurrentScreen('super-admin-dashboard');
-      } else if (user.role === 'moderator') {
+      } else if (storedUser.role === 'moderator') {
         setCurrentScreen('moderator-dashboard');
-      } else if (user.role === 'admin') {
+      } else if (storedUser.role === 'admin') {
         setCurrentScreen('admin-dashboard');
-      } else if (user.role === 'student') {
+      } else if (storedUser.role === 'student') {
         setCurrentScreen('student-dashboard');
-      } else if (user.role === 'driver') {
+      } else if (storedUser.role === 'driver') {
         setCurrentScreen('driver-dashboard');
       }
-    } else {
-      // If no user, show splash then login
-      // Splash screen will handle transition to login
-    }
+    });
+    return () => unsubscribe();
   }, []);
 
   // Set up Firebase message listener
@@ -62,10 +75,10 @@ export default function App() {
     if (isSupported) {
       onMessageListener()
         .then((payload) => {
-          console.log('Foreground message received:', payload);
+          logger.log('Foreground message received:', payload);
         })
         .catch((error) => {
-          console.error('Error in message listener:', error);
+          logger.error('Error in message listener:', error);
         });
     }
   }, [isSupported]);
@@ -74,7 +87,14 @@ export default function App() {
     const user = getCurrentUser();
     if (!user) {
       setCurrentScreen('login');
+      return;
     }
+    if (user.role === 'super_admin') setCurrentScreen('super-admin-dashboard');
+    else if (user.role === 'moderator') setCurrentScreen('moderator-dashboard');
+    else if (user.role === 'admin') setCurrentScreen('admin-dashboard');
+    else if (user.role === 'student') setCurrentScreen('student-dashboard');
+    else if (user.role === 'driver') setCurrentScreen('driver-dashboard');
+    else setCurrentScreen('login');
   };
 
   const handleLogin = () => {

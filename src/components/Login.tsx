@@ -7,6 +7,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/
 import { toast } from 'sonner';
 import uitsLogo from '../assets/uits-logo.png';
 import { ThemeToggle } from './ThemeToggle';
+import { Loader2 } from 'lucide-react';
+import { logger } from '../utils/logger';
 
 interface LoginProps {
   onLogin: () => void;
@@ -17,8 +19,9 @@ interface LoginProps {
 export function Login({ onLogin, onForgotPassword, onRegister }: LoginProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.SyntheticEvent) => {
     e.preventDefault();
 
     if (!email || !password) {
@@ -26,6 +29,12 @@ export function Login({ onLogin, onForgotPassword, onRegister }: LoginProps) {
       return;
     }
 
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      toast.error('Please enter a valid email address');
+      return;
+    }
+
+    setLoading(true);
     try {
       const user = await loginByEmail(email, password);
       if (user) {
@@ -33,15 +42,14 @@ export function Login({ onLogin, onForgotPassword, onRegister }: LoginProps) {
         toast.success(`Welcome, ${user.name}!`);
         onLogin();
       } else {
-        // Check if it's a student email that failed
         if (email.toLowerCase().endsWith('@uits.edu')) {
-          toast.error('Invalid student ID or password. Please check your credentials.');
+          toast.error('Invalid credentials. Please check your email and password.');
         } else {
           toast.error('Invalid credentials');
         }
       }
     } catch (error: any) {
-      console.error('Login error:', error);
+      logger.error('Login error:', error);
       if (error.code === 'auth/user-not-found') {
         toast.error('No account found with this email. Please register first.');
       } else if (error.code === 'auth/wrong-password') {
@@ -51,6 +59,8 @@ export function Login({ onLogin, onForgotPassword, onRegister }: LoginProps) {
       } else {
         toast.error(`Login failed: ${error.message || 'Unknown error'}`);
       }
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -130,9 +140,15 @@ export function Login({ onLogin, onForgotPassword, onRegister }: LoginProps) {
               {/* Sign In Button */}
               <Button
                 type="submit"
-                className="w-full h-12 !bg-red-600 hover:!bg-red-700 text-white font-semibold rounded-xl shadow-sm active:scale-[0.98] transition-all"
+                disabled={loading}
+                className="w-full h-12 !bg-red-600 hover:!bg-red-700 text-white font-semibold rounded-xl shadow-sm active:scale-[0.98] transition-all disabled:opacity-70"
               >
-                Sign In
+                {loading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Signing in...
+                  </>
+                ) : 'Sign In'}
               </Button>
             </form>
 

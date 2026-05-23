@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { sendPasswordResetEmail } from 'firebase/auth';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
@@ -6,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/
 import { toast } from 'sonner';
 import { ArrowLeft, Mail, CheckCircle } from 'lucide-react';
 import uitsLogo from '../assets/uits-logo.png';
+import { auth } from '../config/firebase';
 
 interface ForgotPasswordProps {
   onBack: () => void;
@@ -14,20 +16,37 @@ interface ForgotPasswordProps {
 export function ForgotPassword({ onBack }: ForgotPasswordProps) {
   const [email, setEmail] = useState('');
   const [submitted, setSubmitted] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!email) {
-      toast.error('Please enter your email or student ID');
+      toast.error('Please enter your email address');
       return;
     }
 
-    // Mock password reset
-    setTimeout(() => {
+    if (!auth) {
+      toast.error('Authentication service unavailable');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await sendPasswordResetEmail(auth, email.trim().toLowerCase());
       setSubmitted(true);
       toast.success('Password reset link sent!');
-    }, 500);
+    } catch (err: any) {
+      if (err.code === 'auth/user-not-found') {
+        toast.error('No account found with this email address');
+      } else if (err.code === 'auth/invalid-email') {
+        toast.error('Please enter a valid email address');
+      } else {
+        toast.error('Failed to send reset email. Please try again.');
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   if (submitted) {
@@ -96,8 +115,8 @@ export function ForgotPassword({ onBack }: ForgotPasswordProps) {
                 onChange={(e) => setEmail(e.target.value)}
               />
             </div>
-            <Button type="submit" className="w-full bg-[#FF6B6B] hover:bg-[#E55A5A] text-white">
-              Send Reset Link
+            <Button type="submit" disabled={loading} className="w-full bg-[#FF6B6B] hover:bg-[#E55A5A] text-white">
+              {loading ? 'Sending...' : 'Send Reset Link'}
             </Button>
             <Button
               type="button"

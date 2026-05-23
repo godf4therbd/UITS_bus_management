@@ -7,7 +7,7 @@ import { Label } from './ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { toast } from 'sonner';
-import { ArrowLeft, UserPlus } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import uitsLogo from "../assets/uits-logo.png";
 
 
@@ -29,7 +29,7 @@ export function StudentRegistration({ onBack, onRegister }: StudentRegistrationP
   });
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.SyntheticEvent) => {
     e.preventDefault();
 
     // Validation
@@ -47,6 +47,22 @@ export function StudentRegistration({ onBack, onRegister }: StudentRegistrationP
 
     if (formData.password.length < 6) {
       toast.error('Password must be at least 6 characters');
+      return;
+    }
+
+    const phoneRegex = /^(\+8801|01)[3-9]\d{8}$/;
+    if (!phoneRegex.test(formData.phone.replace(/[\s-]/g, ''))) {
+      toast.error('Enter a valid Bangladeshi phone number (e.g. 01XXXXXXXXX)');
+      return;
+    }
+
+    if (!phoneRegex.test(formData.emergencyContact.replace(/[\s-]/g, ''))) {
+      toast.error('Enter a valid emergency contact number (e.g. 01XXXXXXXXX)');
+      return;
+    }
+
+    if (!/^\d{4,10}$/.test(formData.studentId.replace(/[A-Za-z]/g, ''))) {
+      toast.error('Enter a valid student ID');
       return;
     }
 

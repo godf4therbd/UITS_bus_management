@@ -19,8 +19,13 @@ import {
   Timestamp,
   addDoc,
   increment,
+  limit,
 } from 'firebase/firestore';
 import { Bus, Moderator, Driver, Student, Notification, Report } from '../types';
+import { logger } from './logger';
+
+const NOTIFICATION_LIMIT = 50;
+const REPORT_LIMIT = 50;
 
 // Collection names
 const COLLECTIONS = {
@@ -119,9 +124,10 @@ export async function saveBus(bus: Bus): Promise<boolean> {
 
 export async function saveBuses(buses: Bus[]): Promise<boolean> {
   if (!db) return false;
+  const firestoreDb = db;
   try {
     const promises = buses.map(bus => {
-      const busRef = doc(db, COLLECTIONS.BUSES, bus.number);
+      const busRef = doc(firestoreDb, COLLECTIONS.BUSES, bus.number);
       return setDoc(busRef, convertToFirestore(bus), { merge: true });
     });
     await Promise.all(promises);
@@ -281,9 +287,10 @@ export async function saveModerator(moderator: Moderator): Promise<boolean> {
 
 export async function saveModerators(moderators: Moderator[]): Promise<boolean> {
   if (!db) return false;
+  const firestoreDb = db;
   try {
     const promises = moderators.map(moderator => {
-      const moderatorRef = doc(db, COLLECTIONS.MODERATORS, moderator.id);
+      const moderatorRef = doc(firestoreDb, COLLECTIONS.MODERATORS, moderator.id);
       return setDoc(moderatorRef, convertToFirestore(moderator), { merge: true });
     });
     await Promise.all(promises);
@@ -352,9 +359,10 @@ export async function saveDriver(driver: Driver): Promise<boolean> {
 
 export async function saveDrivers(drivers: Driver[]): Promise<boolean> {
   if (!db) return false;
+  const firestoreDb = db;
   try {
     const promises = drivers.map(driver => {
-      const driverRef = doc(db, COLLECTIONS.DRIVERS, driver.id);
+      const driverRef = doc(firestoreDb, COLLECTIONS.DRIVERS, driver.id);
       return setDoc(driverRef, convertToFirestore(driver), { merge: true });
     });
     await Promise.all(promises);
@@ -439,19 +447,13 @@ export async function getNotifications(busNumber?: string): Promise<Notification
   if (!db) return [];
   try {
     const notificationsRef = collection(db, COLLECTIONS.NOTIFICATIONS);
-    let q = query(notificationsRef, orderBy('timestamp', 'desc'));
-    
-    if (busNumber) {
-      q = query(notificationsRef, where('busNumber', '==', busNumber), orderBy('timestamp', 'desc'));
-    }
-    
+    const q = busNumber
+      ? query(notificationsRef, where('busNumber', '==', busNumber), orderBy('timestamp', 'desc'), limit(NOTIFICATION_LIMIT))
+      : query(notificationsRef, orderBy('timestamp', 'desc'), limit(NOTIFICATION_LIMIT));
     const snapshot = await getDocs(q);
-    return snapshot.docs.map(doc => {
-      const data = doc.data();
-      return convertTimestamp({ ...data, id: doc.id }) as Notification;
-    });
+    return snapshot.docs.map(doc => convertTimestamp({ ...doc.data(), id: doc.id }) as Notification);
   } catch (error) {
-    console.error('Error fetching notifications:', error);
+    logger.error('Error fetching notifications:', error);
     return [];
   }
 }
@@ -474,24 +476,10 @@ export async function saveNotification(notification: Notification): Promise<bool
         : Timestamp.now(),
     };
     
-    console.log('Saving notification to Firestore:', dataToSave);
-    const docRef = await addDoc(notificationsRef, dataToSave);
-    console.log('Notification saved successfully with ID:', docRef.id);
+    await addDoc(notificationsRef, dataToSave);
     return true;
   } catch (error: any) {
-    console.error('Error saving notification:', error);
-    console.error('Error code:', error?.code);
-    console.error('Error message:', error?.message);
-    console.error('Error details:', error);
-    console.error('Notification data:', notification);
-    
-    // Show user-friendly error message
-    if (error?.code === 'permission-denied') {
-      console.error('Permission denied - check Firestore rules');
-    } else if (error?.code === 'unavailable') {
-      console.error('Firestore is unavailable - check internet connection');
-    }
-    
+    logger.error('Error saving notification:', error?.code, error?.message);
     return false;
   }
 }
@@ -500,22 +488,13 @@ export function subscribeToNotifications(
   callback: (notifications: Notification[]) => void,
   busNumber?: string
 ): () => void {
-  if (!db) {
-    return () => {};
-  }
+  if (!db) return () => {};
   const notificationsRef = collection(db, COLLECTIONS.NOTIFICATIONS);
-  let q = query(notificationsRef, orderBy('timestamp', 'desc'));
-  
-  if (busNumber) {
-    q = query(notificationsRef, where('busNumber', '==', busNumber), orderBy('timestamp', 'desc'));
-  }
-  
+  const q = busNumber
+    ? query(notificationsRef, where('busNumber', '==', busNumber), orderBy('timestamp', 'desc'), limit(NOTIFICATION_LIMIT))
+    : query(notificationsRef, orderBy('timestamp', 'desc'), limit(NOTIFICATION_LIMIT));
   return onSnapshot(q, (snapshot) => {
-    const notifications = snapshot.docs.map(doc => {
-      const data = doc.data();
-      return convertTimestamp({ ...data, id: doc.id }) as Notification;
-    });
-    callback(notifications);
+    callback(snapshot.docs.map(doc => convertTimestamp({ ...doc.data(), id: doc.id }) as Notification));
   });
 }
 
@@ -525,19 +504,13 @@ export async function getReports(studentId?: string): Promise<Report[]> {
   if (!db) return [];
   try {
     const reportsRef = collection(db, COLLECTIONS.REPORTS);
-    let q = query(reportsRef, orderBy('timestamp', 'desc'));
-    
-    if (studentId) {
-      q = query(reportsRef, where('studentId', '==', studentId), orderBy('timestamp', 'desc'));
-    }
-    
+    const q = studentId
+      ? query(reportsRef, where('studentId', '==', studentId), orderBy('timestamp', 'desc'), limit(REPORT_LIMIT))
+      : query(reportsRef, orderBy('timestamp', 'desc'), limit(REPORT_LIMIT));
     const snapshot = await getDocs(q);
-    return snapshot.docs.map(doc => {
-      const data = doc.data();
-      return convertTimestamp({ ...data, id: doc.id }) as Report;
-    });
+    return snapshot.docs.map(doc => convertTimestamp({ ...doc.data(), id: doc.id }) as Report);
   } catch (error) {
-    console.error('Error fetching reports:', error);
+    logger.error('Error fetching reports:', error);
     return [];
   }
 }
@@ -568,24 +541,10 @@ export async function saveReport(report: Report): Promise<boolean> {
       dataToSave.description = reportData.description;
     }
 
-    console.log('Saving report to Firestore:', dataToSave);
-    const docRef = await addDoc(reportsRef, dataToSave);
-    console.log('Report saved successfully with ID:', docRef.id);
+    await addDoc(reportsRef, dataToSave);
     return true;
   } catch (error: any) {
-    console.error('Error saving report:', error);
-    console.error('Error code:', error?.code);
-    console.error('Error message:', error?.message);
-    console.error('Error details:', error);
-    console.error('Report data:', report);
-
-    // Show user-friendly error message
-    if (error?.code === 'permission-denied') {
-      console.error('Permission denied - check Firestore rules');
-    } else if (error?.code === 'unavailable') {
-      console.error('Firestore is unavailable - check internet connection');
-    }
-
+    logger.error('Error saving report:', error?.code, error?.message);
     return false;
   }
 }
@@ -594,22 +553,13 @@ export function subscribeToReports(
   callback: (reports: Report[]) => void,
   busNumber?: string
 ): () => void {
-  if (!db) {
-    return () => {};
-  }
+  if (!db) return () => {};
   const reportsRef = collection(db, COLLECTIONS.REPORTS);
-  let q = query(reportsRef, orderBy('timestamp', 'desc'));
-  
-  if (busNumber) {
-    q = query(reportsRef, where('busNumber', '==', busNumber), orderBy('timestamp', 'desc'));
-  }
-  
+  const q = busNumber
+    ? query(reportsRef, where('busNumber', '==', busNumber), orderBy('timestamp', 'desc'), limit(REPORT_LIMIT))
+    : query(reportsRef, orderBy('timestamp', 'desc'), limit(REPORT_LIMIT));
   return onSnapshot(q, (snapshot) => {
-    const reports = snapshot.docs.map(doc => {
-      const data = doc.data();
-      return convertTimestamp({ ...data, id: doc.id }) as Report;
-    });
-    callback(reports);
+    callback(snapshot.docs.map(doc => convertTimestamp({ ...doc.data(), id: doc.id }) as Report));
   });
 }
 

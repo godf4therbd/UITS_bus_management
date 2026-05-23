@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Admin, Bus, Notification, Report } from '../types';
 import { getCurrentUser, logout } from '../utils/auth';
 import { mockBuses } from '../data/mockData';
@@ -17,21 +17,11 @@ import { Toaster, toast } from 'sonner';
 import { LogOut, Bus as BusIcon, Send, Users, Clock, AlertCircle, CheckCircle, Bell, AlertTriangle } from 'lucide-react';
 import { Badge } from './ui/badge';
 import { ThemeToggle } from './ThemeToggle';
-
+import { PREBUILT_MESSAGES } from '../constants/notifications';
 
 interface AdminDashboardProps {
   onLogout: () => void;
 }
-
-const PREBUILT_MESSAGES = [
-  'Bus is full',
-  'Bus is delayed by 10 minutes',
-  'Bus is delayed by 15 minutes',
-  'Bus is delayed by 20 minutes',
-  'Bus will depart shortly',
-  'Bus has departed',
-  'Traffic on the route - expect delays',
-];
 
 // Admin Notification List Component
 function AdminNotificationList({ admin }: { admin: Admin | null }) {
@@ -119,6 +109,7 @@ export function AdminDashboard({ onLogout }: AdminDashboardProps) {
   const [customMessage, setCustomMessage] = useState<string>('');
   const [activeTab, setActiveTab] = useState('dashboard');
   const [reports, setReports] = useState<Report[]>([]);
+  const [sending, setSending] = useState(false);
 
   useEffect(() => {
     const user = getCurrentUser();
@@ -138,15 +129,18 @@ export function AdminDashboard({ onLogout }: AdminDashboardProps) {
     return () => unsubscribeReports();
   }, [admin]);
 
-  const currentBus = buses.find(b => b.number === selectedBus);
+  const currentBus = useMemo(
+    () => buses.find(b => b.number === selectedBus),
+    [buses, selectedBus]
+  );
 
-  const handleLogout = () => {
+  const handleLogout = useCallback(() => {
     logout();
     toast.success('Logged out successfully');
     onLogout();
-  };
+  }, [onLogout]);
 
-  const handleSendNotification = async () => {
+  const handleSendNotification = useCallback(async () => {
     if (!selectedBus) {
       toast.error('Please select a bus first');
       return;
@@ -158,43 +152,42 @@ export function AdminDashboard({ onLogout }: AdminDashboardProps) {
       return;
     }
 
-    // Send FCM push notification
+    setSending(true);
     try {
-      const { sendFirebaseNotification } = await import('../utils/sendFirebaseNotification');
-      
-      await sendFirebaseNotification({
-        message: message.replace('[X]', selectedBus),
+      try {
+        const { sendFirebaseNotification } = await import('../utils/sendFirebaseNotification');
+        await sendFirebaseNotification({
+          message: message.replace('[X]', selectedBus),
+          busNumber: selectedBus,
+          title: `Bus ${selectedBus} Update`,
+          adminName: admin?.name || 'Admin',
+        });
+      } catch {
+        // Continue even if FCM fails - still save to Firestore
+      }
+
+      const notification: Notification = {
+        id: `notif_${Date.now()}_${Math.random()}`,
         busNumber: selectedBus,
-        title: `Bus ${selectedBus} Update`,
+        message: message.replace('[X]', selectedBus),
+        timestamp: new Date(),
         adminName: admin?.name || 'Admin',
-      });
-    } catch (error) {
-      console.error('Error sending FCM notification:', error);
-      // Continue even if FCM fails - still save to Firestore
-    }
+      };
 
-    // Save to Firestore
-    const notification: Notification = {
-      id: `notif_${Date.now()}_${Math.random()}`,
-      busNumber: selectedBus,
-      message: message.replace('[X]', selectedBus),
-      timestamp: new Date(),
-      adminName: admin?.name || 'Admin',
-    };
+      const { saveNotification } = await import('../utils/firestoreService');
+      const success = await saveNotification(notification);
 
-    const { saveNotification } = await import('../utils/firestoreService');
-    const success = await saveNotification(notification);
-    
-    if (success) {
-      toast.success(`Notification sent to all students on ${selectedBus}`);
-    } else {
-      toast.error('Failed to save notification to Firebase. Check console for details.');
-      console.error('Notification failed to save. Check Firestore rules and ensure Firebase is properly configured.');
+      if (success) {
+        toast.success(`Notification sent to all students on ${selectedBus}`);
+        setCustomMessage('');
+        setSelectedMessage('');
+      } else {
+        toast.error('Failed to save notification to Firebase.');
+      }
+    } finally {
+      setSending(false);
     }
-    
-    setCustomMessage('');
-    setSelectedMessage('');
-  };
+  }, [selectedBus, customMessage, selectedMessage, admin, sending]);
 
   const handleUpdateBusStatus = (status: 'on-time' | 'delayed' | 'full') => {
     if (!selectedBus) {
@@ -444,10 +437,11 @@ export function AdminDashboard({ onLogout }: AdminDashboardProps) {
 
                   <Button
                     onClick={handleSendNotification}
+                    disabled={sending}
                     className="w-full bg-[#FF6B6B] hover:bg-[#E55A5A] text-white gap-2"
                   >
                     <Send className="w-4 h-4" />
-                    Send Notification
+                    {sending ? 'Sending...' : 'Send Notification'}
                   </Button>
                 </CardContent>
               </Card>
@@ -609,9 +603,9 @@ export function AdminDashboard({ onLogout }: AdminDashboardProps) {
                     />
                   </div>
 
-                  <Button onClick={handleSendNotification} className="w-full gap-2 bg-[#FF6B6B] hover:bg-[#E55A5A]">
+                  <Button onClick={handleSendNotification} disabled={sending} className="w-full gap-2 bg-[#FF6B6B] hover:bg-[#E55A5A]">
                     <Send className="w-4 h-4" />
-                    Send Notification to {selectedBus || 'Selected Bus'}
+                    {sending ? 'Sending...' : `Send Notification to ${selectedBus || 'Selected Bus'}`}
                   </Button>
                 </CardContent>
               </Card>

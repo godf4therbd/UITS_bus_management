@@ -54,13 +54,26 @@
             "vaul": "^1.1.2"
       },
       "devDependencies": {
+            "@testing-library/jest-dom": "^6.9.1",
+            "@testing-library/react": "^16.3.2",
             "@types/node": "^20.10.0",
+            "@types/react": "^18.3.1",
+            "@types/react-dom": "^18.3.1",
             "@vitejs/plugin-react": "^5.1.0",
             "@vitejs/plugin-react-swc": "^3.10.2",
-            "vite": "^6.3.5"
+            "jsdom": "^29.1.1",
+            "typescript": "^5.4.5",
+            "vite": "^6.3.5",
+            "vitest": "^4.1.7"
       },
       "scripts": {
             "dev": "vite",
-            "build": "vite build"
+            "dev:host": "vite --host",
+            "build": "vite build",
+            "preview": "vite preview",
+            "type-check": "tsc --noEmit",
+            "test": "vitest run",
+            "test:watch": "vitest",
+            "deploy": "npm run build && firebase deploy"
       }
 }
