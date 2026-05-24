@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>UITS Bus Management System – Presentation</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; background: #1a1a2e; color: #fff; }
+
+  .deck { width: 100%; }
+
+  .slide {
+    width: 100vw; height: 100vh;
+    display: none;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 60px;
+    position: relative;
+    overflow: hidden;
+  }
+  .slide.active { display: flex; }
+
+  /* Slide themes */
+  .s1 { background: linear-gradient(135deg, #c0392b 0%, #e74c3c 50%, #ff6b6b 100%); }
+  .s2 { background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); }
+  .s3 { background: linear-gradient(135deg, #0f3460 0%, #16213e 100%); }
+  .s4 { background: linear-gradient(135deg, #1a1a2e 0%, #0f3460 100%); }
+  .s5 { background: linear-gradient(135deg, #16213e 0%, #1a1a2e 100%); }
+  .s6 { background: linear-gradient(135deg, #0f3460 0%, #16213e 100%); }
+  .s7 { background: linear-gradient(135deg, #c0392b 0%, #8e1414 100%); }
+
+  /* Decorative circle */
+  .circle {
+    position: absolute; border-radius: 50%;
+    opacity: 0.08;
+    background: #fff;
+  }
+
+  /* Typography */
+  .tag {
+    font-size: 13px; font-weight: 600; letter-spacing: 3px;
+    text-transform: uppercase; color: rgba(255,255,255,0.6);
+    margin-bottom: 16px;
+  }
+  h1 { font-size: 52px; font-weight: 800; line-height: 1.1; text-align: center; }
+  h2 { font-size: 36px; font-weight: 700; margin-bottom: 32px; }
+  h3 { font-size: 20px; font-weight: 600; margin-bottom: 8px; }
+  p, li { font-size: 17px; line-height: 1.7; color: rgba(255,255,255,0.85); }
+  .subtitle { font-size: 20px; color: rgba(255,255,255,0.75); text-align: center; margin-top: 16px; }
+
+  /* Accent line */
+  .accent { width: 60px; height: 4px; background: #ff6b6b; border-radius: 2px; margin-bottom: 28px; }
+  .accent-white { width: 60px; height: 4px; background: #fff; border-radius: 2px; margin-bottom: 28px; }
+
+  /* Grid layouts */
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; width: 100%; max-width: 900px; }
+  .grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; width: 100%; max-width: 960px; }
+
+  /* Cards */
+  .card {
+    background: rgba(255,255,255,0.07);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 16px;
+    padding: 24px;
+  }
+  .card-icon { font-size: 32px; margin-bottom: 12px; }
+
+  /* Problem points */
+  .prob { display: flex; align-items: flex-start; gap: 14px; margin-bottom: 18px; }
+  .prob-dot {
+    width: 10px; height: 10px; border-radius: 50%;
+    background: #ff6b6b; flex-shrink: 0; margin-top: 8px;
+  }
+
+  /* Tech stack badges */
+  .badges { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 16px; }
+  .badge {
+    padding: 8px 18px; border-radius: 999px;
+    background: rgba(255,255,255,0.12);
+    border: 1px solid rgba(255,255,255,0.2);
+    font-size: 14px; font-weight: 600;
+  }
+
+  /* Role cards */
+  .role {
+    background: rgba(255,255,255,0.07);
+    border-left: 4px solid #ff6b6b;
+    border-radius: 10px;
+    padding: 16px 20px;
+    margin-bottom: 14px;
+  }
+  .role h3 { color: #ff9999; margin-bottom: 4px; font-size: 16px; }
+  .role p { font-size: 14px; }
+
+  /* Stats */
+  .stat { text-align: center; }
+  .stat-num { font-size: 48px; font-weight: 800; color: #ff6b6b; }
+  .stat-label { font-size: 14px; color: rgba(255,255,255,0.6); margin-top: 4px; }
+
+  /* Footer nav */
+  .nav {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+    display: flex; align-items: center; gap: 16px;
+    background: rgba(0,0,0,0.5); border-radius: 999px;
+    padding: 10px 24px; backdrop-filter: blur(8px);
+    border: 1px solid rgba(255,255,255,0.1);
+  }
+  .nav button {
+    background: none; border: none; color: #fff;
+    font-size: 18px; cursor: pointer; padding: 4px 10px;
+    border-radius: 8px; transition: background 0.2s;
+  }
+  .nav button:hover { background: rgba(255,255,255,0.15); }
+  #pageInfo { font-size: 13px; color: rgba(255,255,255,0.6); min-width: 50px; text-align: center; }
+
+  /* Keyboard hint */
+  .hint { position: fixed; top: 20px; right: 20px; font-size: 12px; color: rgba(255,255,255,0.3); }
+</style>
+</head>
+<body>
+
+<!-- SLIDE 1: Title -->
+<div class="slide s1 active">
+  <div class="circle" style="width:500px;height:500px;top:-150px;right:-150px;"></div>
+  <div class="circle" style="width:300px;height:300px;bottom:-80px;left:-80px;"></div>
+  <div class="tag">Department of Computer Science &amp; Engineering</div>
+  <h1>UITS Bus Management<br/>System</h1>
+  <p class="subtitle">A real-time, role-based web application for managing<br/>university bus operations efficiently</p>
+  <div style="margin-top:48px;display:flex;gap:32px;align-items:center;opacity:0.7;">
+    <span style="font-size:14px;">University of Information Technology &amp; Sciences</span>
+    <span>|</span>
+    <span style="font-size:14px;">2025</span>
+  </div>
+</div>
+
+<!-- SLIDE 2: Problem Statement -->
+<div class="slide s2">
+  <div class="circle" style="width:400px;height:400px;top:-100px;left:-100px;"></div>
+  <div style="width:100%;max-width:860px;">
+    <div class="tag">The Challenge</div>
+    <h2>Problem Statement</h2>
+    <div class="accent"></div>
+    <div class="prob"><div class="prob-dot"></div><p>Students had no real-time visibility into bus locations, delays, or capacity — leading to missed buses and long wait times.</p></div>
+    <div class="prob"><div class="prob-dot"></div><p>Admins managed bus operations through phone calls and manual processes with no centralized system.</p></div>
+    <div class="prob"><div class="prob-dot"></div><p>There was no structured way for students to report issues (overcrowding, breakdowns, driver misconduct).</p></div>
+    <div class="prob"><div class="prob-dot"></div><p>Notification of bus delays or cancellations relied on word-of-mouth, causing widespread confusion.</p></div>
+    <div style="margin-top:32px;padding:20px 24px;background:rgba(255,107,107,0.15);border-left:4px solid #ff6b6b;border-radius:10px;">
+      <p><strong>Goal:</strong> Build a unified digital platform that connects students, drivers, admins, and management in real time.</p>
+    </div>
+  </div>
+</div>
+
+<!-- SLIDE 3: Key Features -->
+<div class="slide s3">
+  <div class="circle" style="width:350px;height:350px;bottom:-80px;right:-80px;"></div>
+  <div style="width:100%;max-width:960px;">
+    <div class="tag">What It Does</div>
+    <h2>Key Features</h2>
+    <div class="accent"></div>
+    <div class="grid3">
+      <div class="card"><div class="card-icon">🔔</div><h3>Push Notifications</h3><p>Real-time alerts sent to students about delays, cancellations, and bus status changes via Firebase Cloud Messaging.</p></div>
+      <div class="card"><div class="card-icon">📊</div><h3>Live Bus Status</h3><p>Admins update bus status (On Time / Delayed / Full) instantly. Students see changes reflected in real time.</p></div>
+      <div class="card"><div class="card-icon">📷</div><h3>QR Code Scanning</h3><p>Students scan a QR code to verify their assigned bus and view route information instantly.</p></div>
+      <div class="card"><div class="card-icon">🚨</div><h3>Issue Reporting</h3><p>Students submit reports for overcrowding, breakdowns, or driver issues. Admins track and resolve them.</p></div>
+      <div class="card"><div class="card-icon">🔐</div><h3>Role-Based Access</h3><p>Five distinct roles — Super Admin, Admin, Moderator, Driver, Student — each with a tailored dashboard.</p></div>
+      <div class="card"><div class="card-icon">🌙</div><h3>Dark Mode</h3><p>Full dark and light mode support for comfortable use in all lighting conditions.</p></div>
+    </div>
+  </div>
+</div>
+
+<!-- SLIDE 4: Tech Stack -->
+<div class="slide s4">
+  <div class="circle" style="width:300px;height:300px;top:-60px;right:-60px;"></div>
+  <div style="width:100%;max-width:860px;">
+    <div class="tag">Technology</div>
+    <h2>Tech Stack &amp; Architecture</h2>
+    <div class="accent"></div>
+    <div class="grid2" style="margin-bottom:28px;">
+      <div class="card">
+        <h3 style="color:#ff9999;margin-bottom:12px;">Frontend</h3>
+        <div class="badges">
+          <span class="badge">React 18</span>
+          <span class="badge">TypeScript</span>
+          <span class="badge">Vite 6</span>
+          <span class="badge">Tailwind CSS v4</span>
+          <span class="badge">Radix UI</span>
+          <span class="badge">Lucide Icons</span>
+        </div>
+      </div>
+      <div class="card">
+        <h3 style="color:#ff9999;margin-bottom:12px;">Backend &amp; Services</h3>
+        <div class="badges">
+          <span class="badge">Firebase Auth</span>
+          <span class="badge">Firestore</span>
+          <span class="badge">FCM</span>
+          <span class="badge">Firebase Analytics</span>
+          <span class="badge">html5-qrcode</span>
+        </div>
+      </div>
+    </div>
+    <div class="card" style="text-align:center;">
+      <p style="margin-bottom:12px;color:rgba(255,255,255,0.6);">Deployment &amp; Quality</p>
+      <div class="badges" style="justify-content:center;">
+        <span class="badge">GitHub Pages</span>
+        <span class="badge">Vitest</span>
+        <span class="badge">Testing Library</span>
+        <span class="badge">Firestore Security Rules</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SLIDE 5: Roles -->
+<div class="slide s5">
+  <div class="circle" style="width:400px;height:400px;bottom:-120px;left:-120px;"></div>
+  <div style="width:100%;max-width:860px;">
+    <div class="tag">Access Control</div>
+    <h2>Role-Based Dashboards</h2>
+    <div class="accent"></div>
+    <div class="role"><h3>Super Admin</h3><p>Manages the entire fleet — adds/removes buses, assigns admins and moderators, views all reports, generates QR codes.</p></div>
+    <div class="role"><h3>Admin (Bus Admin)</h3><p>Manages assigned buses, updates bus status, sends notifications to students, resolves student reports.</p></div>
+    <div class="role"><h3>Moderator</h3><p>Monitors operations, views reports and notifications across buses, assists in issue resolution.</p></div>
+    <div class="role"><h3>Driver</h3><p>Views assigned route and stops, receives notifications, updates availability status.</p></div>
+    <div class="role"><h3>Student</h3><p>Scans QR code to verify bus, receives push notifications, reports issues, views real-time bus status.</p></div>
+  </div>
+</div>
+
+<!-- SLIDE 6: Security & Quality -->
+<div class="slide s6">
+  <div class="circle" style="width:350px;height:350px;top:-80px;right:-80px;"></div>
+  <div style="width:100%;max-width:960px;">
+    <div class="tag">Engineering Quality</div>
+    <h2>Security &amp; Performance</h2>
+    <div class="accent"></div>
+    <div class="grid3" style="margin-bottom:32px;">
+      <div class="stat"><div class="stat-num">5</div><div class="stat-label">User Roles with<br/>isolated dashboards</div></div>
+      <div class="stat"><div class="stat-num">17</div><div class="stat-label">Automated unit tests<br/>passing</div></div>
+      <div class="stat"><div class="stat-num">50ms</div><div class="stat-label">Mock login response<br/>(no network)</div></div>
+    </div>
+    <div class="grid2">
+      <div class="card"><h3 style="color:#ff9999;margin-bottom:10px;">Security Measures</h3>
+        <ul style="padding-left:18px;">
+          <li>Firestore rules require authenticated users</li>
+          <li>Firebase session verified on every app load</li>
+          <li>Credentials removed from git history</li>
+          <li>Dev-only logging (no production leaks)</li>
+        </ul>
+      </div>
+      <div class="card"><h3 style="color:#ff9999;margin-bottom:10px;">Performance Optimizations</h3>
+        <ul style="padding-left:18px;">
+          <li>Mock user login is instant (local check first)</li>
+          <li>Firestore reads run in parallel (Promise.all)</li>
+          <li>useMemo &amp; useCallback reduce re-renders</li>
+          <li>Query results limited to 50 records</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SLIDE 7: Conclusion -->
+<div class="slide s7">
+  <div class="circle" style="width:500px;height:500px;top:-150px;left:-150px;"></div>
+  <div class="circle" style="width:300px;height:300px;bottom:-80px;right:-80px;"></div>
+  <div style="text-align:center;max-width:700px;">
+    <div class="tag">Summary</div>
+    <h2 style="font-size:42px;margin-bottom:16px;">Built. Tested. Deployed.</h2>
+    <div class="accent-white" style="margin:0 auto 24px;"></div>
+    <p style="margin-bottom:32px;">The UITS Bus Management System successfully digitizes and centralizes university bus operations — delivering real-time updates, structured communication, and a secure, role-based experience for all stakeholders.</p>
+    <div style="display:flex;gap:16px;justify-content:center;flex-wrap:wrap;margin-bottom:40px;">
+      <div class="badge">✅ Firebase Auth</div>
+      <div class="badge">✅ Real-time Firestore</div>
+      <div class="badge">✅ Push Notifications</div>
+      <div class="badge">✅ QR Scanning</div>
+      <div class="badge">✅ Unit Tests</div>
+      <div class="badge">✅ Live on GitHub Pages</div>
+    </div>
+    <div style="padding:20px 32px;background:rgba(255,255,255,0.15);border-radius:12px;font-size:14px;">
+      <div style="margin-bottom:6px;opacity:0.7;">Live Site</div>
+      <strong>https://godf4therbd.github.io/UITS_bus_management/</strong>
+    </div>
+  </div>
+</div>
+
+<!-- Navigation -->
+<div class="nav">
+  <button onclick="go(-1)">&#8592;</button>
+  <span id="pageInfo">1 / 7</span>
+  <button onclick="go(1)">&#8594;</button>
+</div>
+<div class="hint">← → or click arrows to navigate</div>
+
+<script>
+  const slides = document.querySelectorAll('.slide');
+  let current = 0;
+
+  function go(dir) {
+    slides[current].classList.remove('active');
+    current = (current + dir + slides.length) % slides.length;
+    slides[current].classList.add('active');
+    document.getElementById('pageInfo').textContent = (current + 1) + ' / ' + slides.length;
+  }
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') go(1);
+    if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') go(-1);
+  });
+</script>
+</body>
+</html>

@@ -5,7 +5,6 @@ import { mockBuses } from '../data/mockData';
 import {
   getNotifications,
   subscribeToNotifications,
-  saveReport,
   incrementBusCapacity,
   getBus,
   subscribeToBuses,
@@ -14,7 +13,7 @@ import { Button } from './ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { toast } from 'sonner';
-import { LogOut, Bus as BusIcon, Users, MapPin, QrCode, ScanLine, Bell, AlertTriangle } from 'lucide-react';
+import { LogOut, Users, MapPin, QrCode, ScanLine, Bell, AlertTriangle } from 'lucide-react';
 import { Badge } from './ui/badge';
 import { NotificationPopup } from './NotificationPopup';
 import { QRScanner } from './QRScanner';
@@ -48,8 +47,9 @@ export function StudentDashboard({ onLogout }: StudentDashboardProps) {
     if (user && user.role === 'student') {
       setStudent(user as Student);
       // Check if bus was already scanned
-      if (user.busNumber) {
-        const bus = buses.find(b => b.number === user.busNumber);
+      const studentUser = user as Student;
+      if (studentUser.busNumber) {
+        const bus = buses.find(b => b.number === studentUser.busNumber);
         if (bus) {
           setScannedBus(bus);
         }
@@ -136,15 +136,6 @@ export function StudentDashboard({ onLogout }: StudentDashboardProps) {
     localStorage.setItem('shown_notifications', JSON.stringify(Array.from(newShown)));
   };
 
-  // Mark notification as shown when it appears in popup
-  const handleNotificationShown = (id: string) => {
-    if (!shownNotificationIds.has(id)) {
-      const newShown = new Set(shownNotificationIds);
-      newShown.add(id);
-      setShownNotificationIds(newShown);
-      localStorage.setItem('shown_notifications', JSON.stringify(Array.from(newShown)));
-    }
-  };
 
   // Get notifications for popup (only show unshown, latest one)
   const popupNotifications = useMemo(() => {
@@ -300,48 +291,58 @@ export function StudentDashboard({ onLogout }: StudentDashboardProps) {
         return;
       }
 
-      // Increment bus capacity in Firebase
+      // Try to increment capacity in Firestore; fall back to local mock data if bus isn't there yet
       const result = await incrementBusCapacity(busNumber);
-      
-      if (!result.success) {
-        if (result.isFull) {
-          toast.error(`Bus ${busNumber} is already full (${result.currentStudents}/${result.capacity}). Cannot join.`);
-        } else {
-          toast.error('Failed to update bus capacity. Please try again.');
+
+      let finalBus: Bus | null = null;
+
+      if (result.success) {
+        // Firestore has the bus — fetch the updated document
+        const updatedBusData = await getBus(busNumber);
+        if (updatedBusData) {
+          finalBus = {
+            ...updatedBusData,
+            driverName: qrData.driverName || updatedBusData.driverName,
+            driverPhone: qrData.driverPhone || updatedBusData.driverPhone,
+            route: qrData.route || updatedBusData.route,
+            adminName: qrData.adminName || updatedBusData.adminName,
+            currentStudents: result.currentStudents,
+            status: result.isFull ? 'full' : updatedBusData.status,
+          };
         }
+      } else if (result.isFull) {
+        toast.error(`Bus ${busNumber} is already full (${result.currentStudents}/${result.capacity}). Cannot join.`);
+        return;
+      } else {
+        // Bus not in Firestore yet — use local mock data so scanning still works
+        const localBus = buses.find(b => b.number === busNumber);
+        if (localBus) {
+          finalBus = {
+            ...localBus,
+            driverName: qrData.driverName || localBus.driverName,
+            driverPhone: qrData.driverPhone || localBus.driverPhone,
+            route: qrData.route || localBus.route,
+            adminName: qrData.adminName || localBus.adminName,
+          };
+        }
+      }
+
+      if (!finalBus) {
+        toast.error('Bus not found. Please scan a valid bus QR code.');
         return;
       }
 
-      // Get updated bus data from Firebase
-      const updatedBusData = await getBus(busNumber);
-      
-      if (!updatedBusData) {
-        toast.error('Failed to fetch bus information. Please try again.');
-        return;
-      }
+      setScannedBus(finalBus);
 
-      // Use QR code data to fill in missing information
-      const updatedBus: Bus = {
-        ...updatedBusData,
-        driverName: qrData.driverName || updatedBusData.driverName,
-        driverPhone: qrData.driverPhone || updatedBusData.driverPhone,
-        route: qrData.route || updatedBusData.route,
-        adminName: qrData.adminName || updatedBusData.adminName,
-        currentStudents: result.currentStudents,
-        status: result.isFull ? 'full' : updatedBusData.status,
-      };
-
-      setScannedBus(updatedBus);
-      
       if (student) {
-        const updatedStudent = { ...student, busNumber: updatedBus.number };
+        const updatedStudent = { ...student, busNumber: finalBus.number };
         setStudent(updatedStudent);
         updateStudent(updatedStudent);
       }
-      
-      const availableSeats = result.capacity - result.currentStudents;
+
+      const availableSeats = (finalBus.capacity || 40) - (finalBus.currentStudents || 0);
       toast.success(
-        `QR Code scanned! Connected to ${updatedBus.number}. ${availableSeats} seat${availableSeats !== 1 ? 's' : ''} available.`
+        `QR Code scanned! Connected to ${finalBus.number}. ${availableSeats} seat${availableSeats !== 1 ? 's' : ''} available.`
       );
     } catch (error) {
       console.error('Error parsing QR code:', error);

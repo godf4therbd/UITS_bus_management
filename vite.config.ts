@@ -53,6 +53,7 @@
         '@': path.resolve(__dirname, './src'),
       },
     },
+    base: '/UITS_bus_management/',
     build: {
       target: 'esnext',
       outDir: 'build',
